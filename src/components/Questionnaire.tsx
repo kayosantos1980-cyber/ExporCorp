@@ -127,7 +127,10 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
                   placeholder="Conte-nos mais sobre como foi seu dia..."
                   className="min-h-[120px]"
                   value={comments}
-                  onChange={(e) => setComments(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, '');
+                    setComments(val);
+                  }}
                 />
               </div>
               <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-lg">

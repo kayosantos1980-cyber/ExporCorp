@@ -318,6 +318,41 @@ export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProp
 }
 
 function PunchButton({ label, icon, active, time, onClick, disabled, color }: any) {
+  const [holdProgress, setHoldProgress] = React.useState(0);
+  const timerRef = React.useRef<any>(null);
+  const intervalRef = React.useRef<any>(null);
+  const HOLD_DURATION = 3000; // 3 seconds
+
+  const startHolding = () => {
+    if (disabled || !active || time) return;
+    
+    setHoldProgress(0);
+    const startTime = Date.now();
+    
+    intervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / HOLD_DURATION) * 100, 100);
+      setHoldProgress(progress);
+      
+      if (elapsed >= HOLD_DURATION) {
+        clearInterval(intervalRef.current);
+        clearTimeout(timerRef.current);
+        setHoldProgress(0);
+        onClick();
+      }
+    }, 50);
+
+    timerRef.current = setTimeout(() => {
+      // Safety fallback but the interval handles the logic
+    }, HOLD_DURATION);
+  };
+
+  const stopHolding = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setHoldProgress(0);
+  };
+
   const colorMap: any = {
     blue: 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20',
     orange: 'bg-orange-600 hover:bg-orange-700 shadow-orange-500/20',
@@ -327,30 +362,51 @@ function PunchButton({ label, icon, active, time, onClick, disabled, color }: an
 
   return (
     <button
-      disabled={disabled || !active && !time}
-      onClick={onClick}
+      disabled={disabled || (!active && !time)}
+      onMouseDown={startHolding}
+      onMouseUp={stopHolding}
+      onMouseLeave={stopHolding}
+      onTouchStart={startHolding}
+      onTouchEnd={stopHolding}
       className={`
-        relative h-32 rounded-2xl border-none p-4 flex flex-col justify-between transition-all duration-300 group
+        relative h-32 rounded-2xl border-none p-4 flex flex-col justify-between transition-all duration-300 group overflow-hidden select-none touch-none
         ${active ? `${colorMap[color]} text-white shadow-xl scale-100` : 'bg-slate-800/50 text-slate-500 opacity-60 scale-95'}
         ${time ? 'bg-slate-800/80 !opacity-100 !text-white border-2 border-blue-500/30' : ''}
         disabled:cursor-not-allowed
       `}
     >
-      <div className="flex justify-between items-start w-full">
+      {/* Progress Overlay */}
+      {holdProgress > 0 && (
+        <motion.div 
+          className="absolute bottom-0 left-0 h-1.5 bg-white/40 z-20"
+          initial={{ width: 0 }}
+          animate={{ width: `${holdProgress}%` }}
+          transition={{ type: "tween", ease: "linear", duration: 0.05 }}
+        />
+      )}
+
+      {/* Hold Indicator Overlay */}
+      {holdProgress > 0 && (
+        <div className="absolute inset-0 bg-white/10 flex items-center justify-center z-10">
+          <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Segure para bater...</p>
+        </div>
+      )}
+
+      <div className="flex justify-between items-start w-full relative z-30">
         <div className={`p-2 rounded-xl bg-white/10 ${active ? 'animate-pulse' : ''}`}>
           {React.cloneElement(icon, { size: 24 })}
         </div>
         {time && <CheckCircle2 className="w-5 h-5 text-blue-400" />}
       </div>
       
-      <div className="text-left w-full">
+      <div className="text-left w-full relative z-30">
         <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">{label}</p>
         <p className="text-2xl font-black tabular-nums tracking-tighter">
           {time ? format(parseISO(time), 'HH:mm') : '--:--'}
         </p>
       </div>
 
-      {active && (
+      {active && holdProgress === 0 && (
         <div className="absolute inset-0 rounded-2xl border-2 border-white/20 animate-ping opacity-20 pointer-events-none" />
       )}
     </button>

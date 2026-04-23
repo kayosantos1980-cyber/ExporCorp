@@ -117,7 +117,10 @@ export default function Login({ onLogin, onAdminMode }: LoginProps) {
                 id="sector"
                 placeholder="Ex: Logística, Vendas, etc."
                 value={sector}
-                onChange={(e) => setSector(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, '');
+                  setSector(val);
+                }}
                 className="h-12 text-lg font-bold border-slate-200 focus:border-primary transition-all"
                 required
               />

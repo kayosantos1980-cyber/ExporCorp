@@ -27,6 +27,38 @@ export default function FloatingPunchClock({ user }: FloatingPunchClockProps) {
   const [todayRecord, setTodayRecord] = useState<DailyCheckin | null>(null);
   const [history, setHistory] = useState<DailyCheckin[]>([]);
   const [loading, setLoading] = useState(false);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const timerRef = React.useRef<any>(null);
+  const intervalRef = React.useRef<any>(null);
+  const HOLD_DURATION = 3000;
+
+  const startHolding = () => {
+    if (todayRecord?.checkOutTime !== undefined || state !== 'idle') return;
+    
+    setHoldProgress(0);
+    const startTime = Date.now();
+    
+    intervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / HOLD_DURATION) * 100, 100);
+      setHoldProgress(progress);
+      
+      if (elapsed >= HOLD_DURATION) {
+        clearInterval(intervalRef.current);
+        clearTimeout(timerRef.current);
+        setHoldProgress(0);
+        handlePunch();
+      }
+    }, 50);
+
+    timerRef.current = setTimeout(() => {}, HOLD_DURATION);
+  };
+
+  const stopHolding = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setHoldProgress(0);
+  };
 
   const todayDate = format(new Date(), 'yyyy-MM-dd');
 
@@ -232,12 +264,33 @@ export default function FloatingPunchClock({ user }: FloatingPunchClockProps) {
                             
                             <Button 
                               size="lg"
-                              className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-lg font-black uppercase tracking-tighter gap-3 shadow-xl shadow-blue-500/20"
-                              onClick={handlePunch}
-                              disabled={todayRecord?.checkOutTime !== undefined}
+                              className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-lg font-black uppercase tracking-tighter gap-3 shadow-xl shadow-blue-500/20 relative overflow-hidden select-none touch-none transition-all active:scale-95"
+                              onMouseDown={startHolding}
+                              onMouseUp={stopHolding}
+                              onMouseLeave={stopHolding}
+                              onTouchStart={startHolding}
+                              onTouchEnd={stopHolding}
+                              disabled={todayRecord?.checkOutTime !== undefined || state !== 'idle'}
                             >
-                              <Fingerprint className="w-8 h-8" /> 
-                              Bater Ponto
+                              {holdProgress > 0 && (
+                                <motion.div 
+                                  className="absolute bottom-0 left-0 h-1 bg-white/40 z-10"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${holdProgress}%` }}
+                                  transition={{ type: "tween", ease: "linear", duration: 0.05 }}
+                                />
+                              )}
+                              
+                              {holdProgress > 0 ? (
+                                <span className="animate-pulse flex items-center gap-2">
+                                  <Clock className="w-5 h-5" /> Segure...
+                                </span>
+                              ) : (
+                                <>
+                                  <Fingerprint className="w-8 h-8" /> 
+                                  Bater Ponto
+                                </>
+                              )}
                             </Button>
 
                             <div className="grid grid-cols-2 gap-2 text-[9px] font-black uppercase text-slate-500">
