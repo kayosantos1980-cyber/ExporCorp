@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Information about the employee",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "sector": { "type": "string" },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "employeeId", "sector"]
+    },
+    "Checkin": {
+      "title": "Daily Check-in",
+      "description": "Daily feedback from an employee",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "sector": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "responses": {
+          "type": "object",
+          "description": "Map of questionId to score (1-4)"
+        },
+        "totalScore": { "type": "number" },
+        "averageScore": { "type": "number" },
+        "comments": { "type": "string" },
+        "anonymous": { "type": "boolean" }
+      },
+      "required": ["userId", "date", "responses", "totalScore", "averageScore"]
+    },
+    "Sector": {
+      "title": "Sector",
+      "description": "Department or team",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Employee profile"
+    },
+    "/checkins/{checkinId}": {
+      "schema": "Checkin",
+      "description": "Daily survey responses"
+    },
+    "/sectors/{sectorId}": {
+      "schema": "Sector",
+      "description": "List of company departments"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages between supervisors"
+    }
+  },
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Information about the employee",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "sector": { "type": "string" },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "employeeId", "sector"]
+    },
+    "Checkin": {
+      "title": "Daily Check-in",
+      "description": "Daily feedback from an employee",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "sector": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "responses": {
+          "type": "object",
+          "description": "Map of questionId to score (1-4)"
+        },
+        "totalScore": { "type": "number" },
+        "averageScore": { "type": "number" },
+        "comments": { "type": "string" },
+        "anonymous": { "type": "boolean" }
+      },
+      "required": ["userId", "date", "responses", "totalScore", "averageScore"]
+    },
+    "Sector": {
+      "title": "Sector",
+      "description": "Department or team",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Real-time message in the leadership chat",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderSector": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "senderId", "senderName", "timestamp"]
+    }
+  }
+}
