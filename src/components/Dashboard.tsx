@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { db } from '@/src/lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
-import { DailyCheckin, SectorStats } from '@/src/types';
+import { DailyCheckin, SectorStats, calculateHours } from '@/src/types';
 import { ALERT_THRESHOLD } from '@/src/constants';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -19,13 +19,16 @@ import {
 import { 
   Download, AlertTriangle, TrendingUp, Users, Smile, Clock,
   ArrowBigDownDash, ArrowBigUpDash, ChevronLeft, FileSpreadsheet,
-  MessageSquare
+  MessageSquare, Calendar, Mail, Send
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { QUESTIONS, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '@/src/constants';
 import Chat from './Chat';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface DashboardProps {
   onBack: () => void;
@@ -35,6 +38,9 @@ export default function Dashboard({ onBack }: DashboardProps) {
   const [checkins, setCheckins] = useState<DailyCheckin[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [targetEmail, setTargetEmail] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'checkins'), orderBy('timestamp', 'desc'), limit(500));
@@ -176,6 +182,7 @@ export default function Dashboard({ onBack }: DashboardProps) {
           { id: 'sectors', label: 'Setores' },
           { id: 'ranking', label: 'Ranking' },
           { id: 'reports', label: 'Relatórios' },
+          { id: 'timesheets', label: 'Folha de Ponto' },
           { id: 'chat', label: 'Chat Liderança' }
         ].map((tab) => (
           <button 
@@ -456,6 +463,28 @@ export default function Dashboard({ onBack }: DashboardProps) {
                         "{a.comments}"
                       </p>
                     )}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-50 dark:border-slate-800/50">
+                      {a.checkInTime && (
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded">
+                          <Clock className="w-2 h-2" /> E: {format(new Date(a.checkInTime), 'HH:mm')}
+                        </div>
+                      )}
+                      {a.lunchStartTime && (
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">
+                           L. SAI: {format(new Date(a.lunchStartTime), 'HH:mm')}
+                        </div>
+                      )}
+                      {a.lunchEndTime && (
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">
+                           L. VOL: {format(new Date(a.lunchEndTime), 'HH:mm')}
+                        </div>
+                      )}
+                      {a.checkOutTime && (
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded">
+                           S: {format(new Date(a.checkOutTime), 'HH:mm')}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {checkins.length === 0 && (
@@ -477,6 +506,163 @@ export default function Dashboard({ onBack }: DashboardProps) {
           sector: 'Liderança', 
           createdAt: new Date().toISOString() 
         }} />
+      )}
+
+      {activeTab === 'timesheets' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-500" />
+                    Folha de Ponto Mensal
+                  </CardTitle>
+                  <CardDescription>Consolidado de horas trabalhadas por colaborador.</CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="month-select" className="text-xs font-bold uppercase tracking-widest text-slate-400">Mês:</Label>
+                    <Input 
+                      id="month-select"
+                      type="month" 
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="w-40 h-8 text-sm"
+                    />
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 border-none font-bold" 
+                    onClick={() => {
+                      const [year, month] = selectedMonth.split('-');
+                      const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+                      const end = endOfMonth(start);
+                      
+                      const monthlyRecords = checkins.filter(c => {
+                        const d = parseISO(c.date);
+                        return isWithinInterval(d, { start, end });
+                      });
+
+                      const data = monthlyRecords.map(r => ({
+                        'Matrícula': r.userId,
+                        'Nome': r.userName,
+                        'Data': format(parseISO(r.date), 'dd/MM/yyyy'),
+                        'Entrada': r.checkInTime ? format(parseISO(r.checkInTime), 'HH:mm') : '-',
+                        'Almoço Saída': r.lunchStartTime ? format(parseISO(r.lunchStartTime), 'HH:mm') : '-',
+                        'Almoço Volta': r.lunchEndTime ? format(parseISO(r.lunchEndTime), 'HH:mm') : '-',
+                        'Saída': r.checkOutTime ? format(parseISO(r.checkOutTime), 'HH:mm') : '-',
+                        'Total Horas': calculateHours(r).toFixed(2)
+                      }));
+
+                      const wb = XLSX.utils.book_new();
+                      const ws = XLSX.utils.json_to_sheet(data);
+                      XLSX.utils.book_append_sheet(wb, ws, "Folha de Ponto");
+                      XLSX.writeFile(wb, `Folha_Ponto_${selectedMonth}.xlsx`);
+                    }}
+                  >
+                    <Download className="w-4 h-4" /> Exportar Planilha
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl flex flex-col md:flex-row md:items-end gap-4 shadow-sm">
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-blue-600">E-mail para Envio da Folha (Gmail)</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
+                      <Input 
+                        placeholder="exemplo@gmail.com" 
+                        value={targetEmail}
+                        onChange={(e) => setTargetEmail(e.target.value)}
+                        className="pl-10 h-11 border-blue-100 dark:border-blue-800"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    className="h-11 px-8 bg-blue-600 hover:bg-blue-700 font-bold gap-2 shadow-lg shadow-blue-500/20"
+                    disabled={!targetEmail || sendingEmail}
+                    onClick={() => {
+                      setSendingEmail(true);
+                      setTimeout(() => {
+                        toast.success('Solicitação de envio processada! Verifique sua integração ou anexe a planilha baixada.');
+                        setSendingEmail(false);
+                        // Mock implementation of sending since workspace tool is not available
+                        const subject = encodeURIComponent(`Folha de Ponto - ${selectedMonth}`);
+                        const body = encodeURIComponent(`Olá,\n\nSegue em anexo a folha de ponto referente ao mês ${selectedMonth}.\n\nPara enviar o arquivo oficial, por favor use a função de exportar planilha e anexe-a neste e-mail.`);
+                        window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+                      }, 1000);
+                    }}
+                  >
+                    <Send className="w-4 h-4" /> 
+                    {sendingEmail ? 'Processando...' : 'Enviar para Gmail'}
+                  </Button>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 text-[10px] uppercase font-black tracking-widest text-slate-500">
+                        <th className="px-4 py-3">Matrícula / Nome</th>
+                        <th className="px-4 py-3">Total do Mês</th>
+                        <th className="px-4 py-3">Média Diária</th>
+                        <th className="px-4 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                      {Array.from(new Set(checkins.map(c => c.userId))).map(uid => {
+                        const [year, month] = selectedMonth.split('-');
+                        const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+                        const end = endOfMonth(start);
+                        
+                        const userRecords = checkins.filter(c => {
+                          const d = parseISO(c.date);
+                          return c.userId === uid && isWithinInterval(d, { start, end });
+                        });
+
+                        if (userRecords.length === 0) return null;
+
+                        const totalHours = userRecords.reduce((acc, curr) => acc + calculateHours(curr), 0);
+                        const avgHours = totalHours / userRecords.length;
+
+                        return (
+                          <tr key={uid} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{userRecords[0].userName}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase">{uid} • {userRecords[0].sector}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm font-black text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
+                                {totalHours.toFixed(1)}h
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                {avgHours.toFixed(1)}h / dia
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge className={totalHours > 160 ? 'bg-emerald-500' : 'bg-blue-500'}>
+                                {totalHours > 160 ? 'Completo' : 'Andamento'}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {checkins.length === 0 && (
+                    <div className="p-12 text-center text-slate-400 italic">
+                      Selecione um mês com registros para visualizar a folha de ponto.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

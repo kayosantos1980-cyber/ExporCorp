@@ -8,6 +8,7 @@ import Login from './components/Login';
 import AdminLogin from './components/AdminLogin';
 import Questionnaire from './components/Questionnaire';
 import Dashboard from './components/Dashboard';
+import PunchClock from './components/PunchClock';
 import { UserProfile } from './types';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
@@ -17,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 
-type View = 'login' | 'admin-login' | 'questionnaire' | 'dashboard' | 'completed';
+type View = 'login' | 'admin-login' | 'punch-clock' | 'questionnaire' | 'dashboard' | 'completed';
 
 export default function App() {
   const [view, setView] = useState<View>('login');
@@ -38,7 +39,7 @@ export default function App() {
   const handleLogin = (userData: UserProfile) => {
     setUser(userData);
     localStorage.setItem('checkin_user', JSON.stringify(userData));
-    setView('questionnaire');
+    setView('punch-clock');
     setLastCheckinId(null);
     setCheckoutDone(false);
   };
@@ -161,6 +162,17 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.95 }}
             >
               <AdminLogin onSuccess={() => setView('dashboard')} onBack={() => setView('login')} />
+            </motion.div>
+          )}
+
+          {view === 'punch-clock' && user && (
+            <motion.div
+              key="punch-clock"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <PunchClock user={user} onContinue={() => setView('questionnaire')} />
             </motion.div>
           )}
 

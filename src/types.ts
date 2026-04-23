@@ -24,7 +24,29 @@ export interface DailyCheckin {
   averageScore: number;
   comments: string;
   anonymous: boolean;
+  checkInTime?: string;
+  lunchStartTime?: string;
+  lunchEndTime?: string;
   checkOutTime?: string;
+}
+
+export function calculateHours(checkin: DailyCheckin): number {
+  if (!checkin.checkInTime || !checkin.checkOutTime) return 0;
+  
+  const start = new Date(checkin.checkInTime).getTime();
+  const end = new Date(checkin.checkOutTime).getTime();
+  
+  let totalMs = end - start;
+  
+  // Subtract lunch break if it exists
+  if (checkin.lunchStartTime && checkin.lunchEndTime) {
+    const lStart = new Date(checkin.lunchStartTime).getTime();
+    const lEnd = new Date(checkin.lunchEndTime).getTime();
+    const lunchMs = lEnd - lStart;
+    totalMs -= lunchMs;
+  }
+  
+  return totalMs / (1000 * 60 * 60);
 }
 
 export interface SectorStats {

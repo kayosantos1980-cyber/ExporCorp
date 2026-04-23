@@ -18,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
+import { format } from 'date-fns';
+
 interface QuestionnaireProps {
   user: UserProfile;
   onComplete: (checkinId: string) => void;
@@ -51,15 +53,17 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      const { query, where, getDocs, updateDoc, doc } = await import('firebase/firestore');
       const scores = Object.values(responses) as number[];
       const totalScore = scores.reduce((acc, curr) => acc + curr, 0);
       const averageScore = totalScore / scores.length;
+      const todayDate = format(new Date(), 'yyyy-MM-dd');
 
-      const checkin: DailyCheckin = {
+      const checkinData = {
         userId: user.id,
         userName: anonymous ? 'Anônimo' : user.name,
         sector: user.sector,
-        date: new Date().toISOString().split('T')[0],
+        date: todayDate,
         timestamp: new Date().toISOString(),
         responses,
         totalScore,
@@ -68,9 +72,26 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
         anonymous
       };
 
-      const docRef = await addDoc(collection(db, 'checkins'), checkin);
+      // Check for existing record of today
+      const q = query(
+        collection(db, 'checkins'),
+        where('userId', '==', user.id),
+        where('date', '==', todayDate)
+      );
+      const snapshot = await getDocs(q);
+
+      let finalId = '';
+      if (!snapshot.empty) {
+        const existingDoc = snapshot.docs[0];
+        await updateDoc(doc(db, 'checkins', existingDoc.id), checkinData);
+        finalId = existingDoc.id;
+      } else {
+        const docRef = await addDoc(collection(db, 'checkins'), checkinData);
+        finalId = docRef.id;
+      }
+
       toast.success('Check-in enviado com sucesso! Bom descanso.');
-      onComplete(docRef.id);
+      onComplete(finalId);
     } catch (error) {
       console.error('Submission error:', error);
       toast.error('Erro ao enviar check-in. Tente novamente.');
