@@ -8,7 +8,8 @@ import Login from './components/Login';
 import AdminLogin from './components/AdminLogin';
 import Questionnaire from './components/Questionnaire';
 import Dashboard from './components/Dashboard';
-import PunchClock from './components/PunchClock';
+import FloatingPunchClock from './components/FloatingPunchClock';
+import EmployeeHome from './components/EmployeeHome';
 import { UserProfile } from './types';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
@@ -18,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 
-type View = 'login' | 'admin-login' | 'punch-clock' | 'questionnaire' | 'dashboard' | 'completed';
+type View = 'login' | 'admin-login' | 'home' | 'questionnaire' | 'dashboard' | 'completed';
 
 export default function App() {
   const [view, setView] = useState<View>('login');
@@ -39,7 +40,7 @@ export default function App() {
   const handleLogin = (userData: UserProfile) => {
     setUser(userData);
     localStorage.setItem('checkin_user', JSON.stringify(userData));
-    setView('punch-clock');
+    setView('home');
     setLastCheckinId(null);
     setCheckoutDone(false);
   };
@@ -165,14 +166,17 @@ export default function App() {
             </motion.div>
           )}
 
-          {view === 'punch-clock' && user && (
+          {view === 'home' && user && (
             <motion.div
-              key="punch-clock"
+              key="home"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <PunchClock user={user} onContinue={() => setView('questionnaire')} />
+              <EmployeeHome 
+                user={user} 
+                onStartFeedback={() => setView('questionnaire')} 
+              />
             </motion.div>
           )}
 
@@ -223,41 +227,8 @@ export default function App() {
                 <h2 className="text-3xl font-black italic uppercase tracking-tight">Check-in Concluído!</h2>
                 <p className="text-muted-foreground">
                   Obrigado por compartilhar seu dia conosco. Suas respostas foram salvas com segurança.
+                  Utilize o relógio no canto inferior direito para gerenciar seus horários.
                 </p>
-                
-                <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden">
-                  <CardHeader className="bg-emerald-50/50 dark:bg-emerald-950/20 pb-4">
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2">
-                       <Clock className="w-4 h-4 text-emerald-600" />
-                       Ponto de Saída Eletrônico
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6 space-y-4">
-                    {checkoutDone ? (
-                      <div className="bg-emerald-100/50 dark:bg-emerald-900/30 p-4 rounded-lg">
-                        <p className="text-emerald-700 dark:text-emerald-400 font-bold text-sm">
-                          SAÍDA REGISTRADA ÀS:
-                        </p>
-                        <p className="text-2xl font-black text-emerald-900 dark:text-emerald-100">
-                           {format(new Date(), 'HH:mm:ss')}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <p className="text-xs text-slate-500">
-                          Clique no botão abaixo para registrar o encerramento do seu expediente agora.
-                        </p>
-                        <Button 
-                          className="w-full h-14 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20"
-                          onClick={handleCheckout}
-                          disabled={checkoutLoading}
-                        >
-                          {checkoutLoading ? 'Processando...' : 'REGISTRAR SAÍDA AGORA'}
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
 
                 <div className="pt-4">
                   <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600 font-bold" onClick={handleLogout}>
@@ -269,6 +240,8 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {user && view !== 'dashboard' && <FloatingPunchClock user={user} />}
 
       {/* Footer */}
       <footer className="h-12 border-t bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center px-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-auto">

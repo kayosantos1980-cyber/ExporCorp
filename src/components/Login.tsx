@@ -124,7 +124,7 @@ export default function Login({ onLogin, onAdminMode }: LoginProps) {
             </div>
             <Button 
               type="submit" 
-              className="w-full font-black text-lg h-14 mt-4 bg-slate-900 dark:bg-slate-800 hover:bg-black dark:hover:bg-slate-700 shadow-xl" 
+              className="w-full font-black text-lg h-14 mt-4 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20" 
               disabled={loading}
             >
               {loading ? 'Validando...' : 'INICIAR JORNADA'}

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { db } from '@/src/lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
-import { DailyCheckin, SectorStats, calculateHours } from '@/src/types';
+import { DailyCheckin, SectorStats } from '@/src/types';
 import { ALERT_THRESHOLD } from '@/src/constants';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatTimeDisplay } from '@/src/lib/timeUtils';
 import * as XLSX from 'xlsx';
 import { QUESTIONS, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '@/src/constants';
 import Chat from './Chat';
@@ -387,9 +388,9 @@ export default function Dashboard({ onBack }: DashboardProps) {
                     // Find the question with the lowest score
                     let worstQuestion = null;
                     if (c.responses) {
-                      const responseEntries = Object.entries(c.responses);
+                      const responseEntries = Object.entries(c.responses) as [string, number][];
                       if (responseEntries.length > 0) {
-                        const [qid, score] = responseEntries.sort((a, b) => a[1] - b[1])[0];
+                        const [qid] = responseEntries.sort((a, b) => (a[1] as number) - (b[1] as number))[0];
                         worstQuestion = QUESTIONS.find(q => q.id === qid);
                       }
                     }
@@ -464,24 +465,12 @@ export default function Dashboard({ onBack }: DashboardProps) {
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                      {a.checkInTime && (
-                        <div className="flex items-center gap-1 text-[9px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded">
-                          <Clock className="w-2 h-2" /> E: {format(new Date(a.checkInTime), 'HH:mm')}
-                        </div>
-                      )}
-                      {a.lunchStartTime && (
-                        <div className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">
-                           L. SAI: {format(new Date(a.lunchStartTime), 'HH:mm')}
-                        </div>
-                      )}
-                      {a.lunchEndTime && (
-                        <div className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded">
-                           L. VOL: {format(new Date(a.lunchEndTime), 'HH:mm')}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1 text-[9px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded">
+                        <MessageSquare className="w-2 h-2" /> Feedback: {format(new Date(a.timestamp), 'HH:mm')}
+                      </div>
                       {a.checkOutTime && (
                         <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded">
-                           S: {format(new Date(a.checkOutTime), 'HH:mm')}
+                           <Clock className="w-2 h-2" /> Saída: {format(new Date(a.checkOutTime), 'HH:mm')}
                         </div>
                       )}
                     </div>
@@ -548,11 +537,9 @@ export default function Dashboard({ onBack }: DashboardProps) {
                         'Matrícula': r.userId,
                         'Nome': r.userName,
                         'Data': format(parseISO(r.date), 'dd/MM/yyyy'),
-                        'Entrada': r.checkInTime ? format(parseISO(r.checkInTime), 'HH:mm') : '-',
-                        'Almoço Saída': r.lunchStartTime ? format(parseISO(r.lunchStartTime), 'HH:mm') : '-',
-                        'Almoço Volta': r.lunchEndTime ? format(parseISO(r.lunchEndTime), 'HH:mm') : '-',
+                        'Horário Feedback': format(parseISO(r.timestamp), 'HH:mm'),
                         'Saída': r.checkOutTime ? format(parseISO(r.checkOutTime), 'HH:mm') : '-',
-                        'Total Horas': calculateHours(r).toFixed(2)
+                        'Total Horas': r.totalWorkHours ? formatTimeDisplay(r.totalWorkHours) : '0 min'
                       }));
 
                       const wb = XLSX.utils.book_new();
@@ -606,47 +593,46 @@ export default function Dashboard({ onBack }: DashboardProps) {
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 text-[10px] uppercase font-black tracking-widest text-slate-500">
                         <th className="px-4 py-3">Matrícula / Nome</th>
-                        <th className="px-4 py-3">Total do Mês</th>
-                        <th className="px-4 py-3">Média Diária</th>
-                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Data</th>
+                        <th className="px-4 py-3">Feedback</th>
+                        <th className="px-4 py-3">Saída</th>
+                        <th className="px-4 py-3">Cálculo Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                      {Array.from(new Set(checkins.map(c => c.userId))).map(uid => {
+                      {checkins.map(r => {
                         const [year, month] = selectedMonth.split('-');
                         const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
                         const end = endOfMonth(start);
+                        const d = parseISO(r.date);
                         
-                        const userRecords = checkins.filter(c => {
-                          const d = parseISO(c.date);
-                          return c.userId === uid && isWithinInterval(d, { start, end });
-                        });
-
-                        if (userRecords.length === 0) return null;
-
-                        const totalHours = userRecords.reduce((acc, curr) => acc + calculateHours(curr), 0);
-                        const avgHours = totalHours / userRecords.length;
+                        if (!isWithinInterval(d, { start, end })) return null;
 
                         return (
-                          <tr key={uid} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                          <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
                             <td className="px-4 py-3">
-                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{userRecords[0].userName}</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">{uid} • {userRecords[0].sector}</p>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{r.userName}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase">{r.userId} • {r.sector}</p>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-sm font-black text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
-                                {totalHours.toFixed(1)}h
+                              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                                {format(parseISO(r.date), 'dd/MM/yyyy')}
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                {avgHours.toFixed(1)}h / dia
+                              <span className="text-xs font-black text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
+                                {format(parseISO(r.timestamp), 'HH:mm')}
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <Badge className={totalHours > 160 ? 'bg-emerald-500' : 'bg-blue-500'}>
-                                {totalHours > 160 ? 'Completo' : 'Andamento'}
-                              </Badge>
+                              <span className="text-xs font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded">
+                                {r.checkOutTime ? format(parseISO(r.checkOutTime), 'HH:mm') : '--:--'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-xs font-black text-slate-700 dark:text-slate-300">
+                                {r.totalWorkHours ? formatTimeDisplay(r.totalWorkHours) : '--:--'}
+                              </span>
                             </td>
                           </tr>
                         );

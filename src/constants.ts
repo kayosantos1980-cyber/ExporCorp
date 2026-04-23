@@ -74,3 +74,19 @@ export const SECTORS = [
 ];
 
 export const ALERT_THRESHOLD = 2.5;
+
+export function getDailyQuestions(): Question[] {
+  // Use the current date to create a consistent index
+  const today = new Date();
+  const start = new Date(today.getFullYear(), 0, 0);
+  const diff = today.getTime() - start.getTime();
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+  
+  // 30 questions / 6 per day = 5 blocks
+  const blockSize = 6;
+  const blockIndex = dayOfYear % 5;
+  const startIndex = blockIndex * blockSize;
+  
+  return QUESTIONS.slice(startIndex, startIndex + blockSize);
+}

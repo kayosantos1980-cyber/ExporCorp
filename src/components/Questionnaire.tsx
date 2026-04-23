@@ -7,7 +7,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { QUESTIONS, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '@/src/constants';
+import { getDailyQuestions, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '@/src/constants';
+import { FEEDBACK_BONUS_MINUTES } from '@/src/lib/timeUtils';
 import { UserProfile, DailyCheckin } from '@/src/types';
 import { db } from '@/src/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -27,6 +28,7 @@ interface QuestionnaireProps {
 }
 
 export default function Questionnaire({ user, onComplete, onBack }: QuestionnaireProps) {
+  const [dailyQuestions] = useState(() => getDailyQuestions());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
@@ -34,15 +36,15 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
   const [isFinishing, setIsFinishing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const currentQuestion = QUESTIONS[currentIndex];
-  const progress = ((currentIndex) / QUESTIONS.length) * 100;
+  const currentQuestion = dailyQuestions[currentIndex];
+  const progress = ((currentIndex) / dailyQuestions.length) * 100;
   
   const handleSelect = (value: number) => {
     setResponses((prev) => ({ ...prev, [currentQuestion.id]: value }));
     
     // Automatically advance after a short delay for better UX
     setTimeout(() => {
-      if (currentIndex < QUESTIONS.length - 1) {
+      if (currentIndex < dailyQuestions.length - 1) {
         setCurrentIndex(currentIndex + 1);
       } else {
         setIsFinishing(true);
@@ -69,7 +71,8 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
         totalScore,
         averageScore,
         comments,
-        anonymous
+        anonymous,
+        feedbackBonusMinutes: FEEDBACK_BONUS_MINUTES
       };
 
       // Check for existing record of today
@@ -164,7 +167,7 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
           </Button>
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Pergunta {currentIndex + 1} de {QUESTIONS.length}
+              Pergunta {currentIndex + 1} de {dailyQuestions.length}
             </span>
             <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
               {Math.round(progress)}%
@@ -234,7 +237,7 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
               </Button>
               <div 
                 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
-                onClick={() => setCurrentIndex(Math.min(QUESTIONS.length - 1, currentIndex + 1))}
+                onClick={() => setCurrentIndex(Math.min(dailyQuestions.length - 1, currentIndex + 1))}
               >
                 Pular Pergunta
               </div>
