@@ -12,14 +12,14 @@ import FloatingPunchClock from './components/FloatingPunchClock';
 import EmployeeHome from './components/EmployeeHome';
 import ReportChannel from './components/ReportChannel';
 import AccessibilitySettings from './components/AccessibilitySettings';
-import { UserProfile } from './types';
-import { A11yProvider, useA11y } from './lib/A11yContext';
+import { UserProfile } from '@/src/types';
+import { A11yProvider, useA11y } from '@/src/lib/A11yContext';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, Sun, Moon, CheckCircle2, Clock, ShieldAlert, Accessibility, User as UserIcon } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 
 type View = 'login' | 'admin-login' | 'home' | 'questionnaire' | 'dashboard' | 'completed' | 'reports' | 'accessibility';

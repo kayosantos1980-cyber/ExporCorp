@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShieldCheck, ChevronLeft, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { useA11y } from '../lib/A11yContext';
+import { useA11y } from '@/src/lib/A11yContext';
 
 interface AdminLoginProps {
   onSuccess: () => void;
