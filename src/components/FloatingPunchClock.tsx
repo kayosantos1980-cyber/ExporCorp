@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, Fingerprint, X, CheckCircle2, History, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,10 @@ import { UserProfile, DailyCheckin } from '@/src/types';
 import { db } from '@/src/lib/firebase';
 import { collection, query, where, getDocs, updateDoc, doc, addDoc, onSnapshot, orderBy } from 'firebase/firestore';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { formatTimeDisplay } from '@/src/lib/timeUtils';
 import { toast } from 'sonner';
+import { useA11y } from '../lib/A11yContext';
 
 interface FloatingPunchClockProps {
   user: UserProfile;
@@ -22,14 +24,15 @@ interface FloatingPunchClockProps {
 type PunchState = 'idle' | 'scanning' | 'success' | 'history';
 
 export default function FloatingPunchClock({ user }: FloatingPunchClockProps) {
+  const { speak } = useA11y();
   const [isOpen, setIsOpen] = useState(false);
   const [state, setState] = useState<PunchState>('idle');
   const [todayRecord, setTodayRecord] = useState<DailyCheckin | null>(null);
   const [history, setHistory] = useState<DailyCheckin[]>([]);
   const [loading, setLoading] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
-  const timerRef = React.useRef<any>(null);
-  const intervalRef = React.useRef<any>(null);
+  const timerRef = useRef<any>(null);
+  const intervalRef = useRef<any>(null);
   const HOLD_DURATION = 3000;
 
   const startHolding = () => {
@@ -165,6 +168,7 @@ export default function FloatingPunchClock({ user }: FloatingPunchClockProps) {
             const tempRecord = { ...todayRecord, checkOutTime: now };
             updateData.totalWorkHours = calculateHours(tempRecord);
           } else {
+            speak('Ponto de hoje já concluído');
             toast.info('Ponto de hoje já concluído!');
             setState('idle');
             return;
@@ -173,6 +177,7 @@ export default function FloatingPunchClock({ user }: FloatingPunchClockProps) {
           await updateDoc(doc(db, 'checkins', todayRecord.id!), updateData);
         }
 
+        speak(message);
         toast.success(message);
         setState('success');
         setTimeout(() => setState('idle'), 2000);
@@ -359,5 +364,3 @@ export default function FloatingPunchClock({ user }: FloatingPunchClockProps) {
     </>
   );
 }
-
-import { ptBR } from 'date-fns/locale';

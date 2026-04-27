@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShieldCheck, ChevronLeft, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useA11y } from '../lib/A11yContext';
 
 interface AdminLoginProps {
   onSuccess: () => void;
@@ -17,6 +18,7 @@ interface AdminLoginProps {
 }
 
 export default function AdminLogin({ onSuccess, onBack }: AdminLoginProps) {
+  const { speak } = useA11y();
   const [password, setPassword] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
@@ -24,8 +26,10 @@ export default function AdminLogin({ onSuccess, onBack }: AdminLoginProps) {
     // Simplified admin login for this demo
     if (password === 'admin123') {
       onSuccess();
+      speak('Acesso administrativo autorizado');
       toast.success('Acesso administrativo autorizado.');
     } else {
+      speak('Senha incorreta');
       toast.error('Senha incorreta.');
     }
   };

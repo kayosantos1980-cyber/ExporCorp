@@ -15,9 +15,28 @@
     "/messages/{messageId}": {
       "schema": "Message",
       "description": "Chat messages between supervisors"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Anonymous reports of inappropriate conduct"
     }
   },
   "entities": {
+    "Report": {
+      "title": "Anonymous Report",
+      "description": "Anonymous report of workplace misconduct",
+      "type": "object",
+      "properties": {
+        "protocol": { "type": "string" },
+        "category": { "type": "string", "enum": ["assédio_moral", "assédio_sexual", "abuso_autoridade", "outros"] },
+        "description": { "type": "string" },
+        "evidenceUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["recebida", "em_análise", "resolvida"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["protocol", "category", "description", "status", "createdAt", "updatedAt"]
+    },
     "User": {
       "title": "User",
       "description": "Information about the employee",

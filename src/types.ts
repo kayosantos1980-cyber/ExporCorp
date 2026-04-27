@@ -47,3 +47,23 @@ export interface Message {
   senderSector: string;
   timestamp: string;
 }
+
+export type ReportCategory = 'assédio_moral' | 'assédio_sexual' | 'abuso_autoridade' | 'outros';
+export type ReportStatus = 'recebida' | 'em_análise' | 'resolvida';
+
+export interface AnonymousReport {
+  id?: string;
+  protocol: string;
+  category: ReportCategory;
+  description: string;
+  evidenceUrl?: string; // URL for optional evidence
+  status: ReportStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccessibilitySettings {
+  highContrast: boolean;
+  fontSize: 'small' | 'medium' | 'large' | 'xlarge';
+  voiceNarration: boolean;
+}

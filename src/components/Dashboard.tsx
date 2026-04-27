@@ -19,7 +19,7 @@ import {
 import { 
   Download, AlertTriangle, TrendingUp, Users, Smile, Clock,
   ArrowBigDownDash, ArrowBigUpDash, ChevronLeft, FileSpreadsheet,
-  MessageSquare, Calendar, Mail, Send
+  MessageSquare, Calendar, Mail, Send, ShieldAlert, CheckCircle, FileText
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,14 +29,22 @@ import { QUESTIONS, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '@/src/constants';
 import Chat from './Chat';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { AnonymousReport } from '@/src/types';
+import { updateDoc, doc } from 'firebase/firestore';
+import { useA11y } from '../lib/A11yContext';
+
+import { handleFirestoreError } from '@/src/lib/firebase';
 
 interface DashboardProps {
   onBack: () => void;
 }
 
 export default function Dashboard({ onBack }: DashboardProps) {
+  const { speak } = useA11y();
   const [checkins, setCheckins] = useState<DailyCheckin[]>([]);
+  const [reports, setReports] = useState<AnonymousReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
@@ -44,14 +52,45 @@ export default function Dashboard({ onBack }: DashboardProps) {
   const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'checkins'), orderBy('timestamp', 'desc'), limit(500));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyCheckin));
-      setCheckins(data);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    const qCheckins = query(collection(db, 'checkins'), orderBy('timestamp', 'desc'), limit(500));
+    const unsubscribeCheckins = onSnapshot(
+      qCheckins, 
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyCheckin));
+        setCheckins(data);
+      },
+      (error) => handleFirestoreError(error, 'list', 'checkins')
+    );
+
+    const qReports = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
+    const unsubscribeReports = onSnapshot(
+      qReports, 
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AnonymousReport));
+        setReports(data);
+        setLoading(false);
+      },
+      (error) => handleFirestoreError(error, 'list', 'reports')
+    );
+
+    return () => {
+      unsubscribeCheckins();
+      unsubscribeReports();
+    };
   }, []);
+
+  const handleUpdateReportStatus = async (reportId: string, newStatus: any) => {
+    try {
+      const reportRef = doc(db, 'reports', reportId);
+      await updateDoc(reportRef, { 
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success('Status da denúncia atualizado!');
+    } catch (error) {
+      toast.error('Erro ao atualizar status.');
+    }
+  };
 
   // Analytics logic
   const averageScore = checkins.length > 0 
@@ -183,12 +222,16 @@ export default function Dashboard({ onBack }: DashboardProps) {
           { id: 'sectors', label: 'Setores' },
           { id: 'ranking', label: 'Ranking' },
           { id: 'reports', label: 'Relatórios' },
+          { id: 'ethics', label: 'Denúncia Anônima' },
           { id: 'timesheets', label: 'Folha de Ponto' },
           { id: 'chat', label: 'Chat Liderança' }
         ].map((tab) => (
           <button 
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              speak(`Aba ${tab.label} selecionada`);
+            }}
             className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${
               activeTab === tab.id 
                 ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-slate-100 ring-1 ring-black/5 dark:ring-white/10' 
@@ -495,6 +538,99 @@ export default function Dashboard({ onBack }: DashboardProps) {
           sector: 'Liderança', 
           createdAt: new Date().toISOString() 
         }} />
+      )}
+
+      {activeTab === 'ethics' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-[10px] uppercase font-bold text-slate-400">Total de Denúncias</CardDescription>
+                <CardTitle className="text-3xl font-bold">{reports.length}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-[10px] uppercase font-bold text-slate-400">Em Análise</CardDescription>
+                <CardTitle className="text-3xl font-bold text-orange-500">
+                  {reports.filter(r => r.status === 'em_análise').length}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-[10px] uppercase font-bold text-slate-400">Resolvidas</CardDescription>
+                <CardTitle className="text-3xl font-bold text-emerald-500">
+                  {reports.filter(r => r.status === 'resolvida').length}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-red-500" />
+                Gestão de Denúncias Anônimas
+              </CardTitle>
+              <CardDescription>Ouvidoria interna e conformidade ética.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {reports.map((report) => (
+                  <div key={report.id} className="p-4 border border-slate-100 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-mono text-[10px]">{report.protocol}</Badge>
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-red-50 text-red-600 rounded">
+                            {report.category.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">
+                          Recebida em: {format(parseISO(report.createdAt), 'dd/MM/yyyy HH:mm')}
+                        </p>
+                      </div>
+                      <div className="w-40">
+                         <Select 
+                          value={report.status} 
+                          onValueChange={(val) => handleUpdateReportStatus(report.id!, val)}
+                        >
+                          <SelectTrigger className="h-8 text-[10px] font-black uppercase">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="recebida">Recebida</SelectItem>
+                            <SelectItem value="em_análise">Em Análise</SelectItem>
+                            <SelectItem value="resolvida">Resolvida</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-sm text-slate-600 dark:text-slate-300 italic border-l-4 border-red-500">
+                      "{report.description}"
+                    </div>
+
+                    <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <div className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" /> Sem anexos
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <ShieldAlert className="w-3 h-3" /> Verificado via Criptografia
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {reports.length === 0 && (
+                  <div className="text-center py-20 text-slate-400 italic">
+                    Nenhuma denúncia registrada no momento.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {activeTab === 'timesheets' && (

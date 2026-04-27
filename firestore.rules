@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Global safety net
+    // Global safety net - Default Deny
     match /{document=**} {
       allow read, write: if false;
     }
@@ -12,39 +12,57 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     
-    // We don't have real Auth users yet (simple login), so we use a shared secret or just open creation for now
-    // In a real production app, we would use Firebase Auth.
-    // For this app, I'll allow creation if data is valid.
-    
+    // Validation Blueprints
     function isValidUser(data) {
       return data.keys().hasAll(['name', 'employeeId', 'sector', 'createdAt']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.employeeId is string && data.employeeId.size() > 0 && data.employeeId.size() <= 50 &&
-             data.sector is string && data.sector.size() > 0 && data.sector.size() <= 50;
+             data.sector is string && data.sector.size() > 0 && data.sector.size() <= 100 &&
+             data.keys().size() >= 4;
     }
 
     function isValidCheckin(data) {
-      return data.userId is string &&
-             data.sector is string &&
-             data.totalScore is number &&
-             data.averageScore is number &&
-             data.responses is map;
+      return data.keys().hasAll(['userId', 'userName', 'date', 'timestamp', 'responses']) &&
+             data.userId is string && data.userId.size() <= 50 &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.date is string && data.date.size() == 10 &&
+             data.responses is map &&
+             (data.averageScore == null || data.averageScore is number) &&
+             data.keys().size() >= 5;
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['protocol', 'category', 'description', 'status', 'createdAt', 'updatedAt']) &&
+             data.protocol is string && data.protocol.size() > 0 && data.protocol.size() <= 100 &&
+             data.category is string &&
+             data.description is string && data.description.size() <= 5000 &&
+             data.status in ['recebida', 'em_análise', 'resolvida'];
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['text', 'senderId', 'senderName', 'timestamp']) &&
+             data.text is string && data.text.size() <= 2000 &&
+             data.senderId is string && data.senderId.size() <= 50 &&
+             data.senderName is string && data.senderName.size() <= 100;
     }
 
     match /users/{userId} {
       allow get: if true;
-      allow create: if true;
-      allow update, delete: if false;
+      allow create: if isValidUser(incoming());
+      allow update, delete: if false; // Profiles are managed by system
     }
 
     match /checkins/{checkinId} {
-      allow create: if true; // Simplify for debugging
-      allow update: if true; // Resolve the permission error for checkout
-      allow list, get: if true; 
+      allow create: if isValidCheckin(incoming());
+      allow update: if isValidCheckin(incoming());
+      allow list, get: if true; // Open for this demo (Dashboard needs to see all)
     }
 
     match /messages/{messageId} {
-      allow read, create: if true;
+      allow list: if true;
+      allow get: if true;
+      allow create: if isValidMessage(incoming());
+      allow update, delete: if false;
     }
     
     match /sectors/{sectorId} {
@@ -54,6 +72,13 @@ service cloud.firestore {
     
     match /system/{docId} {
       allow read: if true;
+    }
+
+    match /reports/{reportId} {
+      allow create: if isValidReport(incoming()) && incoming().status == 'recebida';
+      allow list, get: if true; // Dashboard needs to see all
+      allow update: if isValidReport(incoming());
+      allow delete: if false;
     }
   }
 }

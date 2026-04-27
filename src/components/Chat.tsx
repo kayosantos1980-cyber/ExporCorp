@@ -15,6 +15,8 @@ import { Message, UserProfile } from '@/src/types';
 import { Send, Users, MessageSquareText } from 'lucide-react';
 import { format } from 'date-fns';
 
+import { handleFirestoreError } from '@/src/lib/firebase';
+
 interface ChatProps {
   currentUser: UserProfile;
 }
@@ -28,19 +30,23 @@ export default function Chat({ currentUser: initialUser }: ChatProps) {
 
   useEffect(() => {
     const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'), limit(100));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => {
-        const docData = doc.data();
-        return {
-          id: doc.id,
-          ...docData,
-          // Handle serverTimestamp which might be null initially
-          timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate().toISOString() : new Date().toISOString()
-        } as Message;
-      });
-      setMessages(data);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q, 
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => {
+          const docData = doc.data();
+          return {
+            id: doc.id,
+            ...docData,
+            // Handle serverTimestamp which might be null initially
+            timestamp: docData.timestamp?.toDate ? docData.timestamp.toDate().toISOString() : new Date().toISOString()
+          } as Message;
+        });
+        setMessages(data);
+        setLoading(false);
+      },
+      (error) => handleFirestoreError(error, 'list', 'messages')
+    );
     return () => unsubscribe();
   }, []);
 

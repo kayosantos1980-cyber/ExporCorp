@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useA11y } from '../lib/A11yContext';
 
 import { format } from 'date-fns';
 
@@ -28,6 +29,7 @@ interface QuestionnaireProps {
 }
 
 export default function Questionnaire({ user, onComplete, onBack }: QuestionnaireProps) {
+  const { speak } = useA11y();
   const [dailyQuestions] = useState(() => getDailyQuestions());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, number>>({});
@@ -41,19 +43,28 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
   
   const handleSelect = (value: number) => {
     setResponses((prev) => ({ ...prev, [currentQuestion.id]: value }));
+    const selectedOption = currentQuestion.type === 'emoji' 
+      ? EMOJI_OPTIONS.find(o => o.value === value)?.label 
+      : OBJECTIVE_OPTIONS.find(o => o.value === value)?.label;
+    
+    speak(`Selecionado: ${selectedOption}`);
     
     // Automatically advance after a short delay for better UX
     setTimeout(() => {
       if (currentIndex < dailyQuestions.length - 1) {
+        const nextQ = dailyQuestions[currentIndex + 1].text;
         setCurrentIndex(currentIndex + 1);
+        speak(`Próxima pergunta: ${nextQ}`);
       } else {
         setIsFinishing(true);
+        speak('Questionário finalizado. Deseja adicionar comentários?');
       }
     }, 400);
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    speak('Enviando seu feedback, por favor aguarde');
     try {
       const { query, where, getDocs, updateDoc, doc } = await import('firebase/firestore');
       const scores = Object.values(responses) as number[];

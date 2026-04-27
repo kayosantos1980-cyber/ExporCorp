@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, cloneElement } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { db } from '@/src/lib/firebase';
+import { db } from '../lib/firebase';
 import { 
   collection, 
   query, 
@@ -16,21 +16,29 @@ import {
   updateDoc, 
   doc 
 } from 'firebase/firestore';
-import { UserProfile, DailyCheckin } from '@/src/types';
+import { UserProfile, DailyCheckin } from '../types';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatTimeDisplay } from '@/src/lib/timeUtils';
-import { Clock, LogIn, Utensils, LogOut, CheckCircle2, MessageSquare, Fingerprint, History, CalendarDays } from 'lucide-react';
+import { formatTimeDisplay } from '../lib/timeUtils';
+import { Clock, LogIn, Utensils, LogOut, CheckCircle2, MessageSquare, Fingerprint, History, CalendarDays, ShieldAlert, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import { useA11y } from '../lib/A11yContext';
+
+import { handleFirestoreError } from '../lib/firebase';
 
 interface EmployeeHomeProps {
   user: UserProfile;
   onStartFeedback: () => void;
+  onNavigateToReports?: () => void;
 }
 
-export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProps) {
+export default function EmployeeHome({ user, onStartFeedback, onNavigateToReports }: EmployeeHomeProps) {
+  const { speak } = useA11y();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showUpdateModal, setShowUpdateModal] = useState(() => {
+    return !localStorage.getItem('update_1_4_seen');
+  });
   const [todayRecord, setTodayRecord] = useState<DailyCheckin | null>(null);
   const [history, setHistory] = useState<DailyCheckin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,15 +56,19 @@ export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProp
       where('date', '==', todayDate)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const data = snapshot.docs[0].data() as DailyCheckin;
-        setTodayRecord({ id: snapshot.docs[0].id, ...data });
-      } else {
-        setTodayRecord(null);
-      }
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q, 
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data() as DailyCheckin;
+          setTodayRecord({ id: snapshot.docs[0].id, ...data });
+        } else {
+          setTodayRecord(null);
+        }
+        setLoading(false);
+      },
+      (error) => handleFirestoreError(error, 'list', 'checkins')
+    );
 
     // Fetch history
     const historyQ = query(
@@ -65,11 +77,15 @@ export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProp
       where('date', '<=', todayDate)
     );
 
-    const unsubscribeHistory = onSnapshot(historyQ, (snapshot) => {
-      const records = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyCheckin));
-      // Sort in memory for the UI (descending date)
-      setHistory(records.sort((a,b) => b.date.localeCompare(a.date)));
-    });
+    const unsubscribeHistory = onSnapshot(
+      historyQ, 
+      (snapshot) => {
+        const records = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DailyCheckin));
+        // Sort in memory for the UI (descending date)
+        setHistory(records.sort((a,b) => b.date.localeCompare(a.date)));
+      },
+      (error) => handleFirestoreError(error, 'list', 'checkins')
+    );
 
     return () => {
       clearInterval(timer);
@@ -125,24 +141,35 @@ export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProp
             comments: ''
           };
           await addDoc(collection(db, 'checkins'), newDoc);
+          speak('Ponto de Entrada registrado com sucesso');
           toast.success('Ponto de Entrada registrado!');
         } else {
           if (!todayRecord?.id) {
+            speak('Erro: Matrícula de entrada não encontrada');
             toast.error('Você precisa registrar a Entrada primeiro!');
             setPunching(false);
             return;
           }
 
           const updateData: Partial<DailyCheckin> = {};
-          if (type === 'lunchEntry') updateData.lunchStartTime = now;
-          if (type === 'lunchExit') updateData.lunchEndTime = now;
+          let msg = '';
+          if (type === 'lunchEntry') {
+            updateData.lunchStartTime = now;
+            msg = 'Início do intervalo de almoço registrado';
+          }
+          if (type === 'lunchExit') {
+            updateData.lunchEndTime = now;
+            msg = 'Retorno do intervalo de almoço registrado';
+          }
           if (type === 'workExit') {
             updateData.checkOutTime = now;
             const temp = { ...todayRecord, checkOutTime: now };
             updateData.totalWorkHours = calculateHours(temp);
+            msg = 'Encerramento de jornada registrado com sucesso';
           }
 
           await updateDoc(doc(db, 'checkins', todayRecord.id), updateData);
+          speak(msg);
           toast.success('Ponto registrado com sucesso!');
         }
       } catch (error) {
@@ -157,6 +184,55 @@ export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProp
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
+      <AnimatePresence>
+        {showUpdateModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }} 
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6"
+            >
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 mb-2">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Atualização Ética & Inclusiva</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">
+                  Implementamos novos recursos voltados para a sua segurança e acessibilidade universal.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <ShieldAlert className="w-5 h-5 text-red-500 shrink-0" />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-tight">Canal de Denúncias Anônimo</p>
+                    <p className="text-[10px] text-slate-400">Relate condutas inadequadas com 100% de sigilo e acompanhamento por protocolo.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                   🤟
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-tight">Acessibilidade Total</p>
+                    <p className="text-[10px] text-slate-400">Modo de alto contraste, narração de botões e suporte nativo a Libras.</p>
+                  </div>
+                </div>
+              </div>
+              <Button 
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 font-black uppercase tracking-widest"
+                onClick={() => {
+                  setShowUpdateModal(false);
+                  localStorage.setItem('update_1_4_seen', 'true');
+                  speak('Exploração iniciada');
+                }}
+              >
+                Começar a usar
+              </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Header Info */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm gap-4">
         <div>
@@ -256,9 +332,38 @@ export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProp
               <Button 
                 variant="secondary"
                 className="w-full h-12 font-black uppercase text-xs tracking-widest shadow-lg"
-                onClick={onStartFeedback}
+                onClick={() => {
+                  onStartFeedback();
+                  speak('Iniciando pesquisa de feedback diário');
+                }}
               >
                 Iniciar Feedback
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-xl bg-slate-900 text-white overflow-hidden relative group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <ShieldAlert size={80} />
+            </div>
+            <CardHeader>
+              <CardTitle className="text-lg font-black italic uppercase tracking-tight flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-red-500" /> Denúncia Anônima
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                Canal seguro e 100% anônimo para denúncias e relatos de conduta. Sua voz protegida por criptografia.
+              </p>
+              <Button 
+                variant="outline"
+                className="w-full h-10 border-white/10 hover:bg-white/5 text-white font-black uppercase text-[10px] tracking-widest"
+                onClick={() => {
+                  if (onNavigateToReports) onNavigateToReports();
+                  speak('Abrindo canal de denúncia anônima');
+                }}
+              >
+                Acessar Canal
               </Button>
             </CardContent>
           </Card>
@@ -318,9 +423,9 @@ export default function EmployeeHome({ user, onStartFeedback }: EmployeeHomeProp
 }
 
 function PunchButton({ label, icon, active, time, onClick, disabled, color }: any) {
-  const [holdProgress, setHoldProgress] = React.useState(0);
-  const timerRef = React.useRef<any>(null);
-  const intervalRef = React.useRef<any>(null);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const timerRef = useRef<any>(null);
+  const intervalRef = useRef<any>(null);
   const HOLD_DURATION = 3000; // 3 seconds
 
   const startHolding = () => {
@@ -394,7 +499,7 @@ function PunchButton({ label, icon, active, time, onClick, disabled, color }: an
 
       <div className="flex justify-between items-start w-full relative z-30">
         <div className={`p-2 rounded-xl bg-white/10 ${active ? 'animate-pulse' : ''}`}>
-          {React.cloneElement(icon, { size: 24 })}
+          {cloneElement(icon, { size: 24 } as any)}
         </div>
         {time && <CheckCircle2 className="w-5 h-5 text-blue-400" />}
       </div>

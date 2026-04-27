@@ -13,6 +13,7 @@ import { db } from '@/src/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ShieldCheck, User, Users, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useA11y } from '../lib/A11yContext';
 
 interface LoginProps {
   onLogin: (user: UserProfile) => void;
@@ -20,6 +21,7 @@ interface LoginProps {
 }
 
 export default function Login({ onLogin, onAdminMode }: LoginProps) {
+  const { speak } = useA11y();
   const [employeeId, setEmployeeId] = useState('');
   const [sector, setSector] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,6 +59,7 @@ export default function Login({ onLogin, onAdminMode }: LoginProps) {
     setLoading(true);
     try {
       const userRef = doc(db, 'users', idToUse);
+      speak('Validando acesso à matrícula ' + idToUse);
       const userDoc = await getDoc(userRef);
 
       let userData: UserProfile;
@@ -77,9 +80,12 @@ export default function Login({ onLogin, onAdminMode }: LoginProps) {
 
       saveRecent(userData.employeeId, userData.sector);
       onLogin(userData);
-      toast.success(`Bem-vindo(a), ${userData.employeeId}!`);
+      const welcomeMsg = `Bem-vindo, colaborador número ${userData.employeeId}`;
+      speak(welcomeMsg);
+      toast.success(welcomeMsg);
     } catch (error) {
       console.error('Login error:', error);
+      speak('Erro ao realizar login. Verifique sua matrícula.');
       toast.error('Erro ao realizar login.');
     } finally {
       setLoading(false);
@@ -166,7 +172,10 @@ export default function Login({ onLogin, onAdminMode }: LoginProps) {
             variant="secondary"
             size="sm"
             className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-colors w-full border-none shadow-md shadow-emerald-500/20 uppercase text-[10px] tracking-widest"
-            onClick={onAdminMode}
+            onClick={() => {
+              onAdminMode();
+              speak('Acessando painel executivo');
+            }}
           >
             <ShieldCheck className="w-4 h-4" />
             Painel Executivo

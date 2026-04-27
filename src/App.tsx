@@ -10,16 +10,19 @@ import Questionnaire from './components/Questionnaire';
 import Dashboard from './components/Dashboard';
 import FloatingPunchClock from './components/FloatingPunchClock';
 import EmployeeHome from './components/EmployeeHome';
+import ReportChannel from './components/ReportChannel';
+import AccessibilitySettings from './components/AccessibilitySettings';
 import { UserProfile } from './types';
-import { Toaster } from '@/components/ui/sonner';
+import { A11yProvider, useA11y } from './lib/A11yContext';
+import { Toaster } from 'sonner';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogOut, Sun, Moon, CheckCircle2, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { LogOut, Sun, Moon, CheckCircle2, Clock, ShieldAlert, Accessibility, User as UserIcon } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { format } from 'date-fns';
 
-type View = 'login' | 'admin-login' | 'home' | 'questionnaire' | 'dashboard' | 'completed';
+type View = 'login' | 'admin-login' | 'home' | 'questionnaire' | 'dashboard' | 'completed' | 'reports' | 'accessibility';
 
 export default function App() {
   const [view, setView] = useState<View>('login');
@@ -28,6 +31,7 @@ export default function App() {
   const [lastCheckinId, setLastCheckinId] = useState<string | null>(null);
   const [checkoutDone, setCheckoutDone] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const { speak } = useA11y();
 
   useEffect(() => {
     // Check if user is already logged in (persistence)
@@ -37,12 +41,27 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const viewLabels: Record<View, string> = {
+      login: 'Tela de login do funcionário',
+      'admin-login': 'Acesso administrativo',
+      home: 'Área do colaborador',
+      questionnaire: 'Questionário de feedback diário',
+      dashboard: 'Painel administrativo de estatísticas',
+      completed: 'Check-in concluído com sucesso',
+      reports: 'Canal de ética e denúncias',
+      accessibility: 'Configurações de acessibilidade'
+    };
+    speak(viewLabels[view]);
+  }, [view, speak]);
+
   const handleLogin = (userData: UserProfile) => {
     setUser(userData);
     localStorage.setItem('checkin_user', JSON.stringify(userData));
     setView('home');
     setLastCheckinId(null);
     setCheckoutDone(false);
+    toast.success(`Bem-vindo, ${userData.name}!`);
   };
 
   const handleLogout = () => {
@@ -51,6 +70,7 @@ export default function App() {
     setView('login');
     setLastCheckinId(null);
     setCheckoutDone(false);
+    speak('Sessão encerrada');
   };
 
   const handleCheckout = async () => {
@@ -65,6 +85,7 @@ export default function App() {
       });
       setCheckoutDone(true);
       toast.success('Ponto de saída registrado com sucesso!');
+      speak('Saída registrada com sucesso');
     } catch (error) {
       console.error('Checkout error:', error);
       toast.error('Erro ao registrar saída.');
@@ -74,8 +95,10 @@ export default function App() {
   };
 
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
     document.documentElement.classList.toggle('dark');
+    speak(newMode ? 'Modo escuro ativado' : 'Modo claro ativado');
   };
 
   const handleComplete = (id: string) => {
@@ -102,16 +125,31 @@ export default function App() {
 
           <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-6 text-sm font-semibold text-slate-600 dark:text-slate-400 mr-4">
-              <span className="text-slate-400 opacity-50 cursor-not-allowed">Dashboard</span>
-              <span className="text-slate-400 opacity-50 cursor-not-allowed">Setores</span>
-              <span className="text-slate-400 opacity-50 cursor-not-allowed">Relatórios</span>
+              <button 
+                onClick={() => {
+                  setView('reports');
+                  speak('Abrindo canal de denúncia anônima');
+                }}
+                className={`flex items-center gap-1.5 transition-colors ${view === 'reports' ? 'text-red-600' : 'hover:text-red-500'}`}
+              >
+                <ShieldAlert className="w-4 h-4" /> Denúncia Anônima
+              </button>
+              <button 
+                onClick={() => {
+                  setView('accessibility');
+                  speak('Abrindo configurações de acessibilidade');
+                }}
+                className={`flex items-center gap-1.5 transition-colors ${view === 'accessibility' ? 'text-blue-600' : 'hover:text-blue-500'}`}
+              >
+                <Accessibility className="w-4 h-4" /> Acessibilidade
+              </button>
             </div>
             
-            <Button variant="ghost" size="icon" onClick={toggleDarkMode} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={toggleDarkMode} className="rounded-full" aria-label="Alternar modo escuro">
               {isDarkMode ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5" />}
             </Button>
             
-            {user && view !== 'dashboard' && (
+            {user && !['dashboard', 'reports', 'accessibility'].includes(view) && (
               <div className="flex items-center gap-3 ml-2">
                 <div className="text-right hidden xs:block">
                   <p className="text-xs font-bold leading-none text-slate-900 dark:text-slate-50">{user.name}</p>
@@ -127,15 +165,15 @@ export default function App() {
                 </Button>
               </div>
             )}
-            {view === 'dashboard' && (
+            {(view === 'dashboard' || view === 'reports' || view === 'accessibility') && (
                <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => setView('login')} 
+                onClick={() => setView(user ? 'home' : 'login')} 
                 className="rounded-full h-8 px-3 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900"
               >
                 <LogOut className="w-3 h-3 mr-1" />
-                Sair Admin
+                {user ? 'Voltar' : 'Sair Admin'}
               </Button>
             )}
           </div>
@@ -176,6 +214,7 @@ export default function App() {
               <EmployeeHome 
                 user={user} 
                 onStartFeedback={() => setView('questionnaire')} 
+                onNavigateToReports={() => setView('reports')}
               />
             </motion.div>
           )}
@@ -203,6 +242,28 @@ export default function App() {
               exit={{ opacity: 0 }}
             >
               <Dashboard onBack={() => setView('login')} />
+            </motion.div>
+          )}
+
+          {view === 'reports' && (
+            <motion.div
+              key="reports"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <ReportChannel />
+            </motion.div>
+          )}
+
+          {view === 'accessibility' && (
+            <motion.div
+              key="accessibility"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <AccessibilitySettings />
             </motion.div>
           )}
 

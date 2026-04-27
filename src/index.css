@@ -201,3 +201,29 @@
     @apply font-sans;
     }
 }
+
+/* Accessibility Modes */
+.high-contrast {
+  --background: oklch(1 0 0) !important;
+  --foreground: oklch(0 0 0) !important;
+  --primary: oklch(0 0 0) !important;
+  --primary-foreground: oklch(1 0 0) !important;
+  --border: oklch(0 0 0) !important;
+  --card: oklch(1 0 0) !important;
+  --card-foreground: oklch(0 0 0) !important;
+}
+
+.dark.high-contrast {
+  --background: oklch(0 0 0) !important;
+  --foreground: oklch(1 0 0) !important;
+  --primary: oklch(1 0 0) !important;
+  --primary-foreground: oklch(0 0 0) !important;
+  --border: oklch(1 0 0) !important;
+  --card: oklch(0 0 0) !important;
+  --card-foreground: oklch(1 0 0) !important;
+}
+
+:focus-visible {
+  outline: 4px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
