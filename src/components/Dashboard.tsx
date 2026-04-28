@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { ScrollArea } from '../../components/ui/scroll-area';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { db, handleFirestoreError } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { DailyCheckin, SectorStats, AnonymousReport } from '../types';
@@ -26,9 +26,9 @@ import { ptBR } from 'date-fns/locale';
 import { formatTimeDisplay } from '../lib/timeUtils';
 import * as XLSX from 'xlsx';
 import Chat from './Chat';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { updateDoc, doc } from 'firebase/firestore';
 import { useA11y } from '../lib/A11yContext';

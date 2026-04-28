@@ -18,8 +18,8 @@ import { Toaster } from 'sonner';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, Sun, Moon, CheckCircle2, Clock, ShieldAlert, Accessibility, User as UserIcon } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { auth, signInAnonymously } from './lib/firebase';
 

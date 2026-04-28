@@ -6,8 +6,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, Fingerprint, X, CheckCircle2, History, Calculator } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UserProfile, DailyCheckin } from '../types';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, updateDoc, doc, addDoc, onSnapshot, orderBy } from 'firebase/firestore';
