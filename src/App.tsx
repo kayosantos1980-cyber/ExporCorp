@@ -17,8 +17,8 @@ import { A11yProvider, useA11y } from './lib/A11yContext';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, Sun, Moon, CheckCircle2, Clock, ShieldAlert, Accessibility, User as UserIcon, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from './components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card';
 import { format } from 'date-fns';
 import { auth, signInAnonymously } from './lib/firebase';
 
