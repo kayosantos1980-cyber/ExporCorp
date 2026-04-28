@@ -9,13 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { db } from '@/src/lib/firebase';
+import { db, handleFirestoreError } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit } from 'firebase/firestore';
-import { Message, UserProfile } from '@/src/types';
+import { Message, UserProfile } from '../types';
 import { Send, Users, MessageSquareText } from 'lucide-react';
 import { format } from 'date-fns';
-
-import { handleFirestoreError } from '@/src/lib/firebase';
 
 interface ChatProps {
   currentUser: UserProfile;

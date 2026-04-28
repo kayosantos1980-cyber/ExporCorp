@@ -12,8 +12,8 @@ import FloatingPunchClock from './components/FloatingPunchClock';
 import EmployeeHome from './components/EmployeeHome';
 import ReportChannel from './components/ReportChannel';
 import AccessibilitySettings from './components/AccessibilitySettings';
-import { UserProfile } from '@/src/types';
-import { A11yProvider, useA11y } from '@/src/lib/A11yContext';
+import { UserProfile } from './types';
+import { A11yProvider, useA11y } from './lib/A11yContext';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
@@ -21,6 +21,7 @@ import { LogOut, Sun, Moon, CheckCircle2, Clock, ShieldAlert, Accessibility, Use
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
+import { auth, signInAnonymously } from './lib/firebase';
 
 type View = 'login' | 'admin-login' | 'home' | 'questionnaire' | 'dashboard' | 'completed' | 'reports' | 'accessibility';
 
@@ -34,6 +35,11 @@ export default function App() {
   const { speak } = useA11y();
 
   useEffect(() => {
+    // Ensure Firebase Auth is initialized
+    signInAnonymously(auth).catch(err => {
+      console.warn("Silent auth failed:", err);
+    });
+
     // Check if user is already logged in (persistence)
     const savedUser = localStorage.getItem('checkin_user');
     if (savedUser) {

@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UserProfile } from '@/src/types';
-import { db } from '@/src/lib/firebase';
+import { UserProfile } from '../types';
+import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ShieldCheck, User, Users, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';

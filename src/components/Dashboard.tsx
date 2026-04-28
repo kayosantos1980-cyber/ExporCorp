@@ -8,10 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { db } from '@/src/lib/firebase';
+import { db, handleFirestoreError } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
-import { DailyCheckin, SectorStats } from '@/src/types';
-import { ALERT_THRESHOLD } from '@/src/constants';
+import { DailyCheckin, SectorStats, AnonymousReport } from '../types';
+import { ALERT_THRESHOLD, QUESTIONS, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '../constants';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell 
@@ -23,19 +23,15 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatTimeDisplay } from '@/src/lib/timeUtils';
+import { formatTimeDisplay } from '../lib/timeUtils';
 import * as XLSX from 'xlsx';
-import { QUESTIONS, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '@/src/constants';
 import Chat from './Chat';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { AnonymousReport } from '@/src/types';
 import { updateDoc, doc } from 'firebase/firestore';
 import { useA11y } from '../lib/A11yContext';
-
-import { handleFirestoreError } from '@/src/lib/firebase';
 
 interface DashboardProps {
   onBack: () => void;
@@ -88,6 +84,7 @@ export default function Dashboard({ onBack }: DashboardProps) {
       });
       toast.success('Status da denúncia atualizado!');
     } catch (error) {
+      handleFirestoreError(error, 'update', `reports/${reportId}`);
       toast.error('Erro ao atualizar status.');
     }
   };
