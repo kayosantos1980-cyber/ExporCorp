@@ -4,11 +4,11 @@
  */
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Label } from '../../components/ui/label';
+import { Switch } from '../../components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { useA11y } from '../lib/A11yContext';
 import { Accessibility, Eye, Volume2, Type, Languages } from 'lucide-react';
 

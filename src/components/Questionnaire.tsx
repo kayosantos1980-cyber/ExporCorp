@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Progress } from '../../components/ui/progress';
 import { getDailyQuestions, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '../constants';
 import { FEEDBACK_BONUS_MINUTES } from '../lib/timeUtils';
 import { UserProfile, DailyCheckin } from '../types';
@@ -15,9 +15,9 @@ import { collection, addDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, CheckCircle2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Label } from '../../components/ui/label';
 import { useA11y } from '../lib/A11yContext';
 
 import { format } from 'date-fns';
