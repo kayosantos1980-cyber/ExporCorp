@@ -14,10 +14,9 @@ import ReportChannel from './components/ReportChannel';
 import AccessibilitySettings from './components/AccessibilitySettings';
 import { UserProfile } from './types';
 import { A11yProvider, useA11y } from './lib/A11yContext';
-import { Toaster } from 'sonner';
-import { toast } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogOut, Sun, Moon, CheckCircle2, Clock, ShieldAlert, Accessibility, User as UserIcon } from 'lucide-react';
+import { LogOut, Sun, Moon, CheckCircle2, Clock, ShieldAlert, Accessibility, User as UserIcon, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
@@ -44,6 +43,7 @@ export default function App() {
     const savedUser = localStorage.getItem('checkin_user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
+      setView('home');
     }
   }, []);
 
@@ -178,7 +178,7 @@ export default function App() {
                 onClick={() => setView(user ? 'home' : 'login')} 
                 className="rounded-full h-8 px-3 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900"
               >
-                <LogOut className="w-3 h-3 mr-1" />
+                <ArrowLeft className="w-3 h-3 mr-1" />
                 {user ? 'Voltar' : 'Sair Admin'}
               </Button>
             )}
@@ -297,9 +297,12 @@ export default function App() {
                   Utilize o relógio no canto inferior direito para gerenciar seus horários.
                 </p>
 
-                <div className="pt-4">
+                <div className="pt-4 flex flex-col gap-2">
+                  <Button className="w-full font-black uppercase tracking-widest h-12 bg-blue-600 hover:bg-blue-700" onClick={() => setView('home')}>
+                    Ir para Minha Área
+                  </Button>
                   <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600 font-bold" onClick={handleLogout}>
-                    Voltar para o Início
+                    Sair da Conta
                   </Button>
                 </div>
               </div>
