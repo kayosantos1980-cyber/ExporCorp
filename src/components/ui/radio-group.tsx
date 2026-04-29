@@ -1,13 +1,14 @@
 "use client"
 
+import * as React from "react"
 import { Radio as RadioPrimitive } from "@base-ui/react/radio"
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group"
 
 import { cn } from "@/lib/utils"
 
-function RadioGroup({ className, ...props }: RadioGroupPrimitive.Root.Props) {
+function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props<any>) {
   return (
-    <RadioGroupPrimitive.Root
+    <RadioGroupPrimitive
       data-slot="radio-group"
       className={cn("grid w-full gap-2", className)}
       {...props}

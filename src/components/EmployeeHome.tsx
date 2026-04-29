@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, cloneElement } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { db } from '../lib/firebase';
 import { 
   collection, 

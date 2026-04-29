@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { getDailyQuestions, EMOJI_OPTIONS, OBJECTIVE_OPTIONS } from '../constants';
 import { FEEDBACK_BONUS_MINUTES } from '../lib/timeUtils';
