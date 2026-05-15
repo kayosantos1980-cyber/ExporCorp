@@ -73,6 +73,49 @@ export const SECTORS = [
   'Atendimento',
 ];
 
+export const LEVELS = {
+  bronze: {
+    name: 'Bronze',
+    color: 'text-amber-700',
+    bg: 'bg-amber-100',
+    border: 'border-amber-200',
+    benefits: ['Acesso ao portal básico', 'Feedbacks diários'],
+    requirement: 'Nível inicial para todos os colaboradores'
+  },
+  prata: {
+    name: 'Prata',
+    color: 'text-slate-500',
+    bg: 'bg-slate-100',
+    border: 'border-slate-200',
+    benefits: ['Escolher folga semanal (Seg-Sáb)', 'Acesso a canais de comunicação direta'],
+    requirement: 'Bom desempenho e comprometimento mantidos'
+  },
+  ouro: {
+    name: 'Ouro',
+    color: 'text-yellow-600',
+    bg: 'bg-yellow-100',
+    border: 'border-yellow-200',
+    benefits: ['Escolher folga semanal', '2 Domingos de folga por mês', 'Prioridade em promoções internas'],
+    requirement: 'Excelência constante e avaliações positivas contínuas'
+  }
+};
+
+export const DAYS_OF_WEEK = [
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado'
+];
+
+export const SUNDAY_OPTIONS = [
+  'Primeiro Domingo',
+  'Segundo Domingo',
+  'Terceiro Domingo',
+  'Quarto Domingo'
+];
+
 export const ALERT_THRESHOLD = 2.5;
 
 export function getDailyQuestions(): Question[] {

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export type EmployeeLevel = 'bronze' | 'prata' | 'ouro';
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -10,6 +12,10 @@ export interface UserProfile {
   sector: string;
   isAdmin?: boolean;
   createdAt: string;
+  level: EmployeeLevel;
+  lastLevelUpDate?: string;
+  preferredDayOff?: string; // e.g., "Segunda-feira"
+  preferredSundaysOff?: string[]; // e.g., ["Primeiro", "Terceiro"]
 }
 
 export interface DailyCheckin {

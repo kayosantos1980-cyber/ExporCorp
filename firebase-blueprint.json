@@ -46,9 +46,15 @@
         "employeeId": { "type": "string" },
         "sector": { "type": "string" },
         "isAdmin": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "level": { "type": "string", "enum": ["bronze", "prata", "ouro"] },
+        "preferredDayOff": { "type": "string" },
+        "preferredSundaysOff": { 
+          "type": "array",
+          "items": { "type": "string" }
+        }
       },
-      "required": ["name", "employeeId", "sector"]
+      "required": ["name", "employeeId", "sector", "level"]
     },
     "Checkin": {
       "title": "Daily Check-in",

@@ -30,8 +30,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { updateDoc, doc } from 'firebase/firestore';
+import { updateDoc, doc, getDocs } from 'firebase/firestore';
 import { useA11y } from '../lib/A11yContext';
+import { UserProfile, EmployeeLevel } from '../types';
+import { LEVELS } from '../constants';
 
 interface DashboardProps {
   onBack: () => void;
@@ -41,6 +43,7 @@ export default function Dashboard({ onBack }: DashboardProps) {
   const { speak } = useA11y();
   const [checkins, setCheckins] = useState<DailyCheckin[]>([]);
   const [reports, setReports] = useState<AnonymousReport[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
@@ -64,14 +67,25 @@ export default function Dashboard({ onBack }: DashboardProps) {
       (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AnonymousReport));
         setReports(data);
-        setLoading(false);
       },
       (error) => handleFirestoreError(error, 'list', 'reports')
+    );
+
+    const qUsers = query(collection(db, 'users'));
+    const unsubscribeUsers = onSnapshot(
+      qUsers,
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+        setUsers(data);
+        setLoading(false);
+      },
+      (error) => handleFirestoreError(error, 'list', 'users')
     );
 
     return () => {
       unsubscribeCheckins();
       unsubscribeReports();
+      unsubscribeUsers();
     };
   }, []);
 
@@ -218,6 +232,7 @@ export default function Dashboard({ onBack }: DashboardProps) {
           { id: 'overview', label: 'Dashboard' },
           { id: 'sectors', label: 'Setores' },
           { id: 'ranking', label: 'Ranking' },
+          { id: 'users', label: 'Colaboradores' },
           { id: 'reports', label: 'Relatórios' },
           { id: 'ethics', label: 'Denúncia Anônima' },
           { id: 'timesheets', label: 'Folha de Ponto' },
@@ -471,6 +486,92 @@ export default function Dashboard({ onBack }: DashboardProps) {
         </div>
       )}
 
+      {activeTab === 'users' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-500" />
+              Gestão de Colaboradores e Níveis
+            </CardTitle>
+            <CardDescription>Promova colaboradores com base no desempenho e feedback.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <div className="rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 text-[10px] uppercase font-black tracking-widest text-slate-500">
+                      <th className="px-4 py-3">Colaborador</th>
+                      <th className="px-4 py-3">Setor</th>
+                      <th className="px-4 py-3">Nível Atual</th>
+                      <th className="px-4 py-3">Desempenho Médio</th>
+                      <th className="px-4 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                    {users.filter(u => !u.isAdmin).map(u => {
+                      const userCheckins = checkins.filter(c => c.userId === u.id);
+                      const avg = userCheckins.length > 0 
+                        ? userCheckins.reduce((acc, curr) => acc + curr.averageScore, 0) / userCheckins.length 
+                        : 0;
+                      
+                      const levelInfo = LEVELS[u.level || 'bronze'];
+
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{u.name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">{u.id}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="text-[9px] uppercase">{u.sector}</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className={`${levelInfo.bg} ${levelInfo.color} ${levelInfo.border} border text-[9px] uppercase font-black`}>
+                              {levelInfo.name}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-16 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div className={`h-full ${avg > 3 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${(avg/4)*100}%` }} />
+                              </div>
+                              <span className="text-xs font-bold">{avg.toFixed(2)}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <Select 
+                                value={u.level || 'bronze'} 
+                                onValueChange={async (newLevel) => {
+                                  try {
+                                    await updateDoc(doc(db, 'users', u.id), { level: newLevel });
+                                    toast.success(`Nível de ${u.name} atualizado para ${newLevel.toUpperCase()}`);
+                                  } catch (error) {
+                                    toast.error('Erro ao atualizar nível.');
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-28 h-8 text-[10px] font-black uppercase">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="bronze">Bronze</SelectItem>
+                                  <SelectItem value="prata">Prata</SelectItem>
+                                  <SelectItem value="ouro">Ouro</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+             </div>
+          </CardContent>
+        </Card>
+      )}
+
       {activeTab === 'reports' && (
         <Card>
           <CardHeader>
@@ -533,7 +634,8 @@ export default function Dashboard({ onBack }: DashboardProps) {
           name: 'Encarregado Central', 
           employeeId: 'ADMIN', 
           sector: 'Liderança', 
-          createdAt: new Date().toISOString() 
+          createdAt: new Date().toISOString(),
+          level: 'ouro' // Admins are gold level
         }} />
       )}
 

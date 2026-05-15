@@ -70,6 +70,11 @@ export default function App() {
     toast.success(`Bem-vindo, ${userData.name}!`);
   };
 
+  const handleUpdateUser = (userData: UserProfile) => {
+    setUser(userData);
+    localStorage.setItem('checkin_user', JSON.stringify(userData));
+  };
+
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('checkin_user');
@@ -221,6 +226,7 @@ export default function App() {
                 user={user} 
                 onStartFeedback={() => setView('questionnaire')} 
                 onNavigateToReports={() => setView('reports')}
+                onUpdateUser={handleUpdateUser}
               />
             </motion.div>
           )}
@@ -236,6 +242,7 @@ export default function App() {
                 user={user} 
                 onComplete={handleComplete} 
                 onBack={handleLogout}
+                onUpdateUser={handleUpdateUser}
               />
             </motion.div>
           )}

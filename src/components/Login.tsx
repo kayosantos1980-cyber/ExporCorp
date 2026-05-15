@@ -73,7 +73,8 @@ export default function Login({ onLogin, onAdminMode }: LoginProps) {
           employeeId: idToUse,
           sector: sectorToUse,
           createdAt: new Date().toISOString(),
-          isAdmin: false
+          isAdmin: false,
+          level: 'bronze'
         };
         await setDoc(userRef, userData);
       }

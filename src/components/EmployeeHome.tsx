@@ -27,14 +27,18 @@ import { useA11y } from '../lib/A11yContext';
 
 import { handleFirestoreError } from '../lib/firebase';
 
+import CareerProgression from './CareerProgression';
+
 interface EmployeeHomeProps {
   user: UserProfile;
   onStartFeedback: () => void;
   onNavigateToReports?: () => void;
+  onUpdateUser: (updatedUser: UserProfile) => void;
 }
 
-export default function EmployeeHome({ user, onStartFeedback, onNavigateToReports }: EmployeeHomeProps) {
+export default function EmployeeHome({ user, onStartFeedback, onNavigateToReports, onUpdateUser }: EmployeeHomeProps) {
   const { speak } = useA11y();
+  const [activeTab, setActiveTab] = useState('home');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showUpdateModal, setShowUpdateModal] = useState(() => {
     return !localStorage.getItem('update_1_4_seen');
@@ -240,7 +244,7 @@ export default function EmployeeHome({ user, onStartFeedback, onNavigateToReport
             Olá, {user.name}
           </h2>
           <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">
-            {user.sector} • MAT: {user.employeeId}
+            {user.sector} • MAT: {user.employeeId} • NÍVEL {user.level.toUpperCase()}
           </p>
         </div>
         <div className="text-right">
@@ -253,7 +257,30 @@ export default function EmployeeHome({ user, onStartFeedback, onNavigateToReport
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg w-fit border border-slate-200 dark:border-slate-800">
+        {[
+          { id: 'home', label: 'Início' },
+          { id: 'progression', label: 'Carreira' },
+        ].map((tab) => (
+          <button 
+            key={tab.id}
+            onClick={() => {
+              setActiveTab(tab.id);
+              speak(`Aba ${tab.label} selecionada`);
+            }}
+            className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${
+              activeTab === tab.id 
+                ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-slate-100 ring-1 ring-black/5 dark:ring-white/10' 
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'home' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Punch Options Card */}
         <Card className="lg:col-span-2 border-none shadow-2xl overflow-hidden bg-slate-900 text-white">
           <CardHeader className="border-b border-white/5 pb-6">
@@ -418,6 +445,9 @@ export default function EmployeeHome({ user, onStartFeedback, onNavigateToReport
           </Card>
         </div>
       </div>
+      ) : (
+        <CareerProgression user={user} onUpdateUser={onUpdateUser} />
+      )}
     </div>
   );
 }

@@ -14,11 +14,18 @@ service cloud.firestore {
     
     // Validation Blueprints
     function isValidUser(data) {
-      return data.keys().hasAll(['name', 'employeeId', 'sector', 'createdAt']) &&
+      return data.keys().hasAll(['name', 'employeeId', 'sector', 'createdAt', 'level']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.employeeId is string && data.employeeId.size() > 0 && data.employeeId.size() <= 50 &&
              data.sector is string && data.sector.size() > 0 && data.sector.size() <= 100 &&
-             data.keys().size() >= 4;
+             data.level in ['bronze', 'prata', 'ouro'] &&
+             (data.preferredDayOff == null || data.preferredDayOff is string) &&
+             (data.preferredSundaysOff == null || data.preferredSundaysOff is list) &&
+             data.keys().size() >= 5;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isValidCheckin(data) {
@@ -48,8 +55,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if true;
+      allow list: if isSignedIn();
       allow create: if isValidUser(incoming());
-      allow update, delete: if false; // Profiles are managed by system
+      allow update: if (isOwner(userId) || isSignedIn()) && isValidUser(incoming());
+      allow delete: if false; 
     }
 
     match /checkins/{checkinId} {

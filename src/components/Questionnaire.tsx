@@ -21,14 +21,16 @@ import { Label } from '@/components/ui/label';
 import { useA11y } from '../lib/A11yContext';
 
 import { format } from 'date-fns';
+import { checkLevelProgression, processLevelUp } from '../lib/progressionUtils';
 
 interface QuestionnaireProps {
   user: UserProfile;
   onComplete: (checkinId: string) => void;
   onBack: () => void;
+  onUpdateUser: (updatedUser: UserProfile) => void;
 }
 
-export default function Questionnaire({ user, onComplete, onBack }: QuestionnaireProps) {
+export default function Questionnaire({ user, onComplete, onBack, onUpdateUser }: QuestionnaireProps) {
   const { speak } = useA11y();
   const [dailyQuestions] = useState(() => getDailyQuestions());
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -105,6 +107,14 @@ export default function Questionnaire({ user, onComplete, onBack }: Questionnair
       }
 
       toast.success('Check-in enviado com sucesso! Bom descanso.');
+      
+      // Check for level progression automatically
+      const nextLevel = await checkLevelProgression(user);
+      if (nextLevel) {
+        const updatedUser = await processLevelUp(user, nextLevel);
+        onUpdateUser(updatedUser);
+      }
+
       onComplete(finalId);
     } catch (error) {
       console.error('Submission error:', error);
