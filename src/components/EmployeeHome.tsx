@@ -244,7 +244,7 @@ export default function EmployeeHome({ user, onStartFeedback, onNavigateToReport
             Olá, {user.name}
           </h2>
           <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">
-            {user.sector} • MAT: {user.employeeId} • NÍVEL {user.level.toUpperCase()}
+            {user.sector} • MAT: {user.employeeId} • NÍVEL {(user.level || 'bronze').toUpperCase()}
           </p>
         </div>
         <div className="text-right">

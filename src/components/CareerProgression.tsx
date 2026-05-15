@@ -50,7 +50,7 @@ export default function CareerProgression({ user, onUpdateUser }: CareerProgress
     fetchStats();
   }, [user.id, user.lastLevelUpDate, user.createdAt]);
 
-  const currentLevelInfo = LEVELS[user.level];
+  const currentLevelInfo = LEVELS[user.level || 'bronze'];
   
   const handleSaveBenefits = async () => {
     setIsSaving(true);
@@ -84,14 +84,14 @@ export default function CareerProgression({ user, onUpdateUser }: CareerProgress
   };
 
   const levelOrder: EmployeeLevel[] = ['bronze', 'prata', 'ouro'];
-  const currentIdx = levelOrder.indexOf(user.level);
+  const currentIdx = levelOrder.indexOf(user.level || 'bronze');
 
   return (
     <div className="space-y-6">
       <Card className="border-none shadow-xl bg-white dark:bg-slate-900 overflow-hidden">
         <div className={`h-2 w-full bg-gradient-to-r ${
-          user.level === 'ouro' ? 'from-yellow-400 to-yellow-600' : 
-          user.level === 'prata' ? 'from-slate-300 to-slate-500' : 
+          (user.level || 'bronze') === 'ouro' ? 'from-yellow-400 to-yellow-600' : 
+          (user.level || 'bronze') === 'prata' ? 'from-slate-300 to-slate-500' : 
           'from-amber-600 to-amber-800'
         }`} />
         <CardHeader>

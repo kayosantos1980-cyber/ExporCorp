@@ -65,7 +65,14 @@ export default function Login({ onLogin, onAdminMode }: LoginProps) {
       let userData: UserProfile;
 
       if (userDoc.exists()) {
-        userData = { id: userDoc.id, ...userDoc.data() } as UserProfile;
+        const data = userDoc.data();
+        userData = { id: userDoc.id, ...data } as UserProfile;
+        
+        // Migration: If user doesn't have a level, assign 'bronze' and update doc
+        if (!userData.level) {
+          userData.level = 'bronze';
+          await updateDoc(userRef, { level: 'bronze' });
+        }
       } else {
         userData = {
           id: idToUse,

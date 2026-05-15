@@ -40,9 +40,15 @@ export default function App() {
     });
 
     // Check if user is already logged in (persistence)
-    const savedUser = localStorage.getItem('checkin_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const savedUserStr = localStorage.getItem('checkin_user');
+    if (savedUserStr) {
+      const savedUser = JSON.parse(savedUserStr);
+      // Migration for level field
+      if (!savedUser.level) {
+        savedUser.level = 'bronze';
+        localStorage.setItem('checkin_user', JSON.stringify(savedUser));
+      }
+      setUser(savedUser);
       setView('home');
     }
   }, []);
